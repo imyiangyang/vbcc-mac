@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		2F25B3062FBB74DC00B42AD5 /* Messages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F25B3032FBB74DC00B42AD5 /* Messages.swift */; };
+		2F25B3072FBB74DC00B42AD5 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 2F25B3042FBB74DC00B42AD5 /* README.md */; };
+		2F25B3C42FBBFD1700B42AD5 /* VBCCServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F25B3C22FBBFD1700B42AD5 /* VBCCServer.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		2F25B2C32FBB73CB00B42AD5 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +33,9 @@
 		2F25B2B32FBB73CB00B42AD5 /* vbcc-mac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "vbcc-mac.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2F25B2C22FBB73CB00B42AD5 /* vbcc-macTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "vbcc-macTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2F25B2CC2FBB73CB00B42AD5 /* vbcc-macUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "vbcc-macUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		2F25B3032FBB74DC00B42AD5 /* Messages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Messages.swift; sourceTree = "<group>"; };
+		2F25B3042FBB74DC00B42AD5 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		2F25B3C22FBBFD1700B42AD5 /* VBCCServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VBCCServer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -75,6 +84,8 @@
 		2F25B2AA2FBB73CB00B42AD5 = {
 			isa = PBXGroup;
 			children = (
+				2F25B3C32FBBFD1700B42AD5 /* Networking */,
+				2F25B3052FBB74DC00B42AD5 /* shared */,
 				2F25B2B52FBB73CB00B42AD5 /* vbcc-mac */,
 				2F25B2C52FBB73CB00B42AD5 /* vbcc-macTests */,
 				2F25B2CF2FBB73CB00B42AD5 /* vbcc-macUITests */,
@@ -90,6 +101,25 @@
 				2F25B2CC2FBB73CB00B42AD5 /* vbcc-macUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		2F25B3052FBB74DC00B42AD5 /* shared */ = {
+			isa = PBXGroup;
+			children = (
+				2F25B3032FBB74DC00B42AD5 /* Messages.swift */,
+				2F25B3042FBB74DC00B42AD5 /* README.md */,
+			);
+			name = shared;
+			path = ../shared;
+			sourceTree = SOURCE_ROOT;
+		};
+		2F25B3C32FBBFD1700B42AD5 /* Networking */ = {
+			isa = PBXGroup;
+			children = (
+				2F25B3C22FBBFD1700B42AD5 /* VBCCServer.swift */,
+			);
+			name = Networking;
+			path = "vbcc-mac/Networking";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -212,6 +242,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2F25B3072FBB74DC00B42AD5 /* README.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -236,6 +267,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2F25B3062FBB74DC00B42AD5 /* Messages.swift in Sources */,
+				2F25B3C42FBBFD1700B42AD5 /* VBCCServer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -398,12 +431,24 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = DD2T6C8HT8;
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSBonjourServices = _vbcc._tcp;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = VBCC;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -430,12 +475,24 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = DD2T6C8HT8;
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSBonjourServices = _vbcc._tcp;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = VBCC;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
