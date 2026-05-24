@@ -19,6 +19,7 @@ nonisolated final class OllamaTextPolisher {
     struct GenerateRequest: Codable, Equatable {
         let model: String
         let prompt: String
+        let think: Bool
         let stream: Bool
     }
 
@@ -48,6 +49,7 @@ nonisolated final class OllamaTextPolisher {
         let requestPayload = GenerateRequest(
             model: model,
             prompt: Self.composePrompt(systemPrompt: systemPrompt, transcript: text),
+            think: false,
             stream: false
         )
 

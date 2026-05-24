@@ -243,7 +243,7 @@ private struct OllamaSettingsSection: View {
                 GridRow {
                     Text("模型")
                         .foregroundStyle(.secondary)
-                    TextField("qwen2.5:7b", text: $ollama.model)
+                    TextField("qwen3.5:0.8b", text: $ollama.model)
                         .textFieldStyle(.roundedBorder)
                 }
                 GridRow {

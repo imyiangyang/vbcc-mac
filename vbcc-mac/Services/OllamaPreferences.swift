@@ -35,7 +35,7 @@ final class OllamaPreferences: ObservableObject {
         self.defaults = defaults
         self.isEnabled = defaults.object(forKey: Keys.isEnabled) as? Bool ?? false
         self.endpointText = defaults.string(forKey: Keys.endpointText) ?? "http://127.0.0.1:11434"
-        self.model = defaults.string(forKey: Keys.model) ?? "qwen2.5:7b"
+        self.model = defaults.string(forKey: Keys.model) ?? "qwen3.5:0.8b"
         self.prompt = defaults.string(forKey: Keys.prompt) ?? Self.defaultPrompt
         let storedTimeout = defaults.double(forKey: Keys.timeout)
         self.timeout = storedTimeout > 0 ? storedTimeout : 20

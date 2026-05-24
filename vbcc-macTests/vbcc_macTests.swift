@@ -23,7 +23,8 @@ struct vbcc_macTests {
             }
             let payload = try JSONDecoder().decode(OllamaTextPolisher.GenerateRequest.self, from: body)
 
-            #expect(payload.model == "qwen2.5:7b")
+            #expect(payload.model == "qwen3.5:0.8b")
+            #expect(payload.think == false)
             #expect(payload.stream == false)
             #expect(payload.prompt.contains("修正错别字"))
             #expect(payload.prompt.contains("呃今天meetng改到三点"))
@@ -37,7 +38,7 @@ struct vbcc_macTests {
         let config = OllamaConfiguration(
             enabled: true,
             endpoint: URL(string: "http://127.0.0.1:11434")!,
-            model: "qwen2.5:7b",
+            model: "qwen3.5:0.8b",
             prompt: "修正错别字，保留中英双语表达。",
             timeout: 5
         )
