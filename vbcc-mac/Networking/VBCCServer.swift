@@ -42,7 +42,9 @@ final class VBCCServer: ObservableObject {
     @Published private(set) var log: [LogEntry] = []
 
     let tokens: TokenStore
+    let ollamaPreferences: OllamaPreferences
     private let injector = TextInjector()
+    private let textPolisher: OllamaTextPolisher
 
     // MARK: - 配对配置
 
@@ -70,8 +72,14 @@ final class VBCCServer: ObservableObject {
 
     // MARK: - init
 
-    init(tokens: TokenStore) {
+    init(
+        tokens: TokenStore,
+        ollamaPreferences: OllamaPreferences = OllamaPreferences(),
+        textPolisher: OllamaTextPolisher = OllamaTextPolisher()
+    ) {
         self.tokens = tokens
+        self.ollamaPreferences = ollamaPreferences
+        self.textPolisher = textPolisher
     }
 
     // MARK: - 生命周期
@@ -434,7 +442,8 @@ final class VBCCServer: ObservableObject {
 
         Task { @MainActor [weak self] in
             guard let self else { return }
-            let ok = await self.injector.inject(text, sendEnter: sendEnter)
+            let textToInject = await self.textForInjection(original: text)
+            let ok = await self.injector.inject(textToInject, sendEnter: sendEnter)
             if !ok {
                 self.appendLog("🚫 注入失败：缺少 Accessibility 权限")
             }
@@ -443,6 +452,29 @@ final class VBCCServer: ObservableObject {
                 payload: AckPayload(ok: ok, error: ok ? nil : .accessibilityDenied),
                 inReplyTo: env.id
             ), on: conn)
+        }
+    }
+
+    private func textForInjection(original text: String) async -> String {
+        guard let configuration = ollamaPreferences.configuration, configuration.enabled else {
+            return text
+        }
+
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return text
+        }
+
+        do {
+            let polished = try await textPolisher.polish(text, configuration: configuration)
+            if polished != text {
+                appendLog("🪄 Ollama 已整理语音文本")
+            } else {
+                appendLog("🪄 Ollama 返回原文")
+            }
+            return polished
+        } catch {
+            appendLog("⚠️ Ollama 整理失败，使用原文：\(error)")
+            return text
         }
     }
 

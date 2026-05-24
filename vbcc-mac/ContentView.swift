@@ -35,9 +35,13 @@ struct ContentView: View {
 
             devicesSection
             Divider()
+            OllamaSettingsSection()
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            Divider()
             logView
         }
-        .frame(minWidth: 520, minHeight: 480)
+        .frame(minWidth: 620, minHeight: 680)
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: server.pendingPair)
         .animation(.easeInOut(duration: 0.25), value: ax.isTrusted)
     }
@@ -214,6 +218,69 @@ private struct DeviceRow: View {
     }
 }
 
+// MARK: - Ollama 设置
+
+private struct OllamaSettingsSection: View {
+    @EnvironmentObject private var ollama: OllamaPreferences
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label("Ollama 本地整理", systemImage: "wand.and.sparkles")
+                    .font(.headline)
+                Spacer()
+                Toggle("启用", isOn: $ollama.isEnabled)
+                    .toggleStyle(.switch)
+            }
+
+            Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
+                GridRow {
+                    Text("地址")
+                        .foregroundStyle(.secondary)
+                    TextField("http://127.0.0.1:11434", text: $ollama.endpointText)
+                        .textFieldStyle(.roundedBorder)
+                }
+                GridRow {
+                    Text("模型")
+                        .foregroundStyle(.secondary)
+                    TextField("qwen2.5:7b", text: $ollama.model)
+                        .textFieldStyle(.roundedBorder)
+                }
+                GridRow {
+                    Text("超时")
+                        .foregroundStyle(.secondary)
+                    HStack {
+                        Slider(value: $ollama.timeout, in: 5...60, step: 1)
+                        Text("\(Int(ollama.timeout)) 秒")
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 52, alignment: .trailing)
+                    }
+                }
+            }
+            .disabled(!ollama.isEnabled)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("自定义 Prompt")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                TextEditor(text: $ollama.prompt)
+                    .font(.system(.body, design: .default))
+                    .frame(minHeight: 92)
+                    .scrollContentBackground(.hidden)
+                    .background(Color(nsColor: .textBackgroundColor))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.secondary.opacity(0.25), lineWidth: 1)
+                    )
+                    .disabled(!ollama.isEnabled)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 // MARK: - 权限横幅
 
 private struct AccessibilityBanner: View {
@@ -253,5 +320,6 @@ private struct AccessibilityBanner: View {
     ContentView()
         .environmentObject(VBCCServer(tokens: TokenStore()))
         .environmentObject(TokenStore())
+        .environmentObject(OllamaPreferences())
         .environmentObject(AccessibilityStatus())
 }
