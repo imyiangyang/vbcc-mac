@@ -1,91 +1,112 @@
 {
-  "fill" : "system-light",
+  "fill" : {
+    "solid" : "extended-gray:1.00000,1.00000"
+  },
   "groups" : [
     {
       "layers" : [
         {
-          "fill-specializations" : [
-            {
-              "appearance" : "dark",
-              "value" : {
-                "solid" : "srgb:0.91765,0.30196,0.23922,1.00000"
-              }
-            }
-          ],
-          "glass" : false,
-          "image-name" : "Image 13.png",
-          "name" : "Image 13",
-          "position" : {
-            "scale" : 1,
-            "translation-in-points" : [
-              0.049999999999954525,
-              36.16521870487031
-            ]
-          }
-        },
-        {
-          "blend-mode-specializations" : [
-            {
-              "appearance" : "dark",
-              "value" : "plus-darker"
-            }
-          ],
-          "glass" : false,
-          "image-name" : "Image 12.png",
-          "name" : "Image 12",
-          "position" : {
-            "scale" : 0.9,
-            "translation-in-points" : [
-              0,
-              36.16521870487031
-            ]
-          }
-        },
-        {
-          "fill-specializations" : [
-            {
-              "value" : "automatic"
-            },
-            {
-              "appearance" : "dark",
-              "value" : {
-                "solid" : "extended-srgb:0.00000,0.53333,1.00000,1.00000"
-              }
-            }
-          ],
-          "glass" : false,
-          "image-name" : "Image 11.png",
-          "name" : "Image 11",
-          "position" : {
-            "scale" : 0.9,
-            "translation-in-points" : [
-              -0.4500000000000455,
-              -183.76521870487034
-            ]
-          }
-        },
-        {
-          "fill-specializations" : [
-            {
-              "value" : {
-                "solid" : "srgb:0.25000,0.25000,0.25000,1.00000"
-              }
-            },
-            {
-              "appearance" : "dark",
-              "value" : {
-                "solid" : "display-p3:1.00000,1.00000,1.00000,1.00000"
-              }
-            }
-          ],
           "glass" : false,
           "image-name" : "Image 10.png",
           "name" : "Image 10",
           "position" : {
-            "scale" : 0.9,
+            "scale" : 1,
+            "translation-in-points" : [
+              80.40000000000009,
+              -275.3630431675809
+            ]
+          }
+        },
+        {
+          "glass" : false,
+          "image-name" : "Image 11.png",
+          "name" : "Image 11",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              -80.40000000000003,
+              -161.6671673347946
+            ]
+          }
+        },
+        {
+          "glass" : false,
+          "image-name" : "Image 3.png",
+          "name" : "Image 3",
+          "position" : {
+            "scale" : 1,
             "translation-in-points" : [
               0,
-              36.16521870487031
+              92.76304316758092
+            ]
+          }
+        },
+        {
+          "glass" : false,
+          "image-name" : "Image 9.png",
+          "name" : "Image 9",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              92.76304316758092
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "solid" : "extended-gray:0.50000,1.00000"
+          },
+          "hidden" : true,
+          "image-name" : "Image 7.png",
+          "name" : "Image 7",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              105.2265625
+            ]
+          }
+        },
+        {
+          "fill-specializations" : [
+            {
+              "value" : "none"
+            },
+            {
+              "appearance" : "dark",
+              "value" : {
+                "solid" : "extended-gray:1.00000,1.00000"
+              }
+            },
+            {
+              "appearance" : "tinted",
+              "value" : {
+                "solid" : "extended-gray:1.00000,1.00000"
+              }
+            }
+          ],
+          "glass" : false,
+          "hidden" : true,
+          "image-name" : "Image.png",
+          "name" : "Image",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              100.2265625
+            ]
+          }
+        },
+        {
+          "glass" : false,
+          "image-name" : "Image 12.png",
+          "name" : "Image 12",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              92.76304316758092
             ]
           }
         }
