@@ -2,7 +2,7 @@
 //  ContentView.swift
 //  vbcc-mac
 //
-//  V1 第 2 阶段：状态条 + 配对码大显示 + 已配对设备列表 + 日志。
+//  V1 第 2 阶段：状态条 + 配对数字大显示 + 已配对设备列表 + 日志。
 //
 
 import SwiftUI
@@ -27,7 +27,7 @@ struct ContentView: View {
             }
 
             if let pending = server.pendingPair {
-                PairCodeCard(pending: pending)
+                PairNumberCard(pending: pending)
                     .padding(16)
                     .transition(.opacity.combined(with: .scale(scale: 0.97)))
                 Divider()
@@ -102,7 +102,7 @@ struct ContentView: View {
                 }
             }
             if tokens.devices.isEmpty {
-                Text("还没有配对设备。在 iPhone 上发起配对，这里会显示 4 位数字码。")
+                Text("还没有配对设备。在 iPhone 上发起配对，这里会显示一个配对数字。")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 8)
@@ -150,9 +150,9 @@ struct ContentView: View {
     }
 }
 
-// MARK: - 配对码卡片
+// MARK: - 配对数字卡片
 
-private struct PairCodeCard: View {
+private struct PairNumberCard: View {
     let pending: VBCCServer.PendingPair
 
     @State private var now: Date = .now
@@ -164,21 +164,18 @@ private struct PairCodeCard: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Text("配对码")
+            Text("配对数字")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            HStack(spacing: 14) {
-                ForEach(Array(pending.code), id: \.self) { ch in
-                    Text(String(ch))
-                        .font(.system(size: 56, weight: .semibold, design: .rounded))
-                        .frame(width: 64, height: 84)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(.thinMaterial))
-                }
-            }
+            Text(VBCC.pairNumberText(pending.number))
+                .font(.system(size: 72, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .frame(minWidth: 168, minHeight: 104)
+                .background(RoundedRectangle(cornerRadius: 16).fill(.thinMaterial))
             VStack(spacing: 4) {
                 Text(pending.deviceName)
                     .font(.callout)
-                Text("\(remaining) 秒内在 iPhone 上输入")
+                Text("\(remaining) 秒内在 iPhone 上选出这个数字")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

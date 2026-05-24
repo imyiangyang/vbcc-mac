@@ -3,7 +3,7 @@
 //  vbcc-mac
 //
 //  Bonjour 注册 + WebSocket 服务端。
-//  V1 第 2 阶段：4 位数字码配对 + token 持久化。
+//  V1 第 2 阶段：数字选择配对 + token 持久化。
 //
 
 import Foundation
@@ -21,10 +21,10 @@ final class VBCCServer: ObservableObject {
         case failed(String)
     }
 
-    /// 屏幕上需要展示的配对码（同时只支持一个）
+    /// 屏幕上需要展示的配对数字（同时只支持一个）
     struct PendingPair: Identifiable, Equatable {
         let id = UUID()
-        let code: String
+        let number: Int
         let deviceName: String
         let expiresAt: Date
     }
@@ -47,7 +47,6 @@ final class VBCCServer: ObservableObject {
     // MARK: - 配对配置
 
     private let pairWindowSeconds: TimeInterval = 60
-    private let maxPairAttempts: Int = 3
 
     // MARK: - 每连接的会话
 
@@ -55,8 +54,8 @@ final class VBCCServer: ObservableObject {
         enum Phase {
             /// 刚连上，等 pair.request 或 session.hello
             case awaitingHandshake
-            /// pair.request 收到，等 pair.confirm 里的码
-            case awaitingPairConfirm(code: String, attemptsLeft: Int, deadline: Date, request: PairRequestPayload)
+            /// pair.request 收到、已下发 pair.challenge，等 pair.confirm 里的选择
+            case awaitingPairConfirm(answer: Int, deadline: Date, request: PairRequestPayload)
             /// 已建立的会话
             case established(device: PairedDevice)
         }
@@ -202,9 +201,9 @@ final class VBCCServer: ObservableObject {
         guard let session = sessions.removeValue(forKey: id) else { return }
         session.pairTimeoutTask?.cancel()
 
-        // 如果这个连接正在持有 pendingPair 配对码，清理掉
-        if case let .awaitingPairConfirm(code, _, _, _) = session.phase,
-           pendingPair?.code == code {
+        // 如果这个连接正在持有 pendingPair 配对数字，清理掉
+        if case let .awaitingPairConfirm(answer, _, _) = session.phase,
+           pendingPair?.number == answer {
             pendingPair = nil
         }
         connectedClients = sessions.count
@@ -296,16 +295,20 @@ final class VBCCServer: ObservableObject {
             return
         }
 
-        let code = Self.generatePairCode()
+        let challenge = Self.generatePairChallenge()
         let deadline = Date().addingTimeInterval(pairWindowSeconds)
         session.phase = .awaitingPairConfirm(
-            code: code,
-            attemptsLeft: maxPairAttempts,
+            answer: challenge.answer,
             deadline: deadline,
             request: env.payload
         )
-        pendingPair = PendingPair(code: code, deviceName: env.payload.deviceName, expiresAt: deadline)
-        appendLog("🔢 配对码 \(code) 给 \(env.payload.deviceName)")
+        pendingPair = PendingPair(number: challenge.answer, deviceName: env.payload.deviceName, expiresAt: deadline)
+        appendLog("🔢 配对数字 \(VBCC.pairNumberText(challenge.answer)) 候选 \(challenge.numbers.map(VBCC.pairNumberText)) 给 \(env.payload.deviceName)")
+
+        // 下发 3 个候选数字（含正确答案，已打乱顺序）给 iPhone 显示成按钮
+        send(Envelope(type: .pairChallenge,
+                      payload: PairChallengePayload(numbers: challenge.numbers),
+                      inReplyTo: env.id), on: session.conn)
 
         startPairTimeout(for: session)
     }
@@ -331,7 +334,7 @@ final class VBCCServer: ObservableObject {
     // MARK: - 配对：pair.confirm
 
     private func handlePairConfirm(env: Envelope<PairConfirmPayload>, session: ClientSession) {
-        guard case let .awaitingPairConfirm(expectedCode, attemptsLeft, deadline, request) = session.phase else {
+        guard case let .awaitingPairConfirm(answer, deadline, request) = session.phase else {
             send(Envelope(type: .pairResult,
                           payload: PairResultPayload(ok: false, error: .internal),
                           inReplyTo: env.id), on: session.conn)
@@ -348,8 +351,8 @@ final class VBCCServer: ObservableObject {
             return
         }
 
-        // 检查码
-        if env.payload.code == expectedCode {
+        // 检查选择：3 选 1，只给一次机会，选错立即断开
+        if env.payload.choice == answer {
             // 成功：生成并存储 token
             let device = tokens.register(
                 iPhoneId: request.iPhoneId,
@@ -380,29 +383,14 @@ final class VBCCServer: ObservableObject {
                           )),
                  on: session.conn)
         } else {
-            // 错码：扣次
-            let remaining = attemptsLeft - 1
-            if remaining > 0 {
-                session.phase = .awaitingPairConfirm(
-                    code: expectedCode,
-                    attemptsLeft: remaining,
-                    deadline: deadline,
-                    request: request
-                )
-                appendLog("❌ 配对码错 (剩 \(remaining) 次)")
-                send(Envelope(type: .pairResult,
-                              payload: PairResultPayload(ok: false, error: .pairCodeInvalid),
-                              inReplyTo: env.id), on: session.conn)
-            } else {
-                appendLog("❌ 配对码错次数用尽，断开")
-                send(Envelope(type: .pairResult,
-                              payload: PairResultPayload(ok: false, error: .pairCodeInvalid),
-                              inReplyTo: env.id), on: session.conn)
-                pendingPair = nil
-                session.pairTimeoutTask?.cancel()
-                session.phase = .awaitingHandshake
-                session.conn.cancel()
-            }
+            appendLog("❌ 配对数字选错（\(VBCC.pairNumberText(env.payload.choice)) ≠ \(VBCC.pairNumberText(answer))），断开")
+            send(Envelope(type: .pairResult,
+                          payload: PairResultPayload(ok: false, error: .pairChoiceInvalid),
+                          inReplyTo: env.id), on: session.conn)
+            pendingPair = nil
+            session.pairTimeoutTask?.cancel()
+            session.phase = .awaitingHandshake
+            session.conn.cancel()
         }
     }
 
@@ -507,10 +495,16 @@ final class VBCCServer: ObservableObject {
 
     // MARK: - 工具
 
-    /// 生成 4 位数字配对码
-    private static func generatePairCode() -> String {
-        let n = Int.random(in: 0...9999)
-        return String(format: "%04d", n)
+    /// 生成配对挑战：3 个互不相同的 0...99 随机数（已打乱顺序），
+    /// 其中随机一个作为正确答案显示在 Mac 屏幕上。
+    private static func generatePairChallenge() -> (numbers: [Int], answer: Int) {
+        var picked = Set<Int>()
+        while picked.count < 3 {
+            picked.insert(Int.random(in: 0...99))
+        }
+        let numbers = picked.shuffled()
+        let answer = numbers.randomElement()!
+        return (numbers, answer)
     }
 
     private func shortId(_ id: String) -> String { String(id.prefix(8)) }
