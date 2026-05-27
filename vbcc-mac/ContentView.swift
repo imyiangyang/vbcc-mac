@@ -222,6 +222,14 @@ private struct DeviceRow: View {
 
 private struct OllamaSettingsSection: View {
     @EnvironmentObject private var ollama: OllamaPreferences
+    @State private var testState: TestState = .idle
+
+    private enum TestState: Equatable {
+        case idle
+        case running
+        case success
+        case failure(String)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -233,51 +241,137 @@ private struct OllamaSettingsSection: View {
                     .toggleStyle(.switch)
             }
 
-            Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
-                GridRow {
-                    Text("地址")
-                        .foregroundStyle(.secondary)
-                    TextField("http://127.0.0.1:11434", text: $ollama.endpointText)
-                        .textFieldStyle(.roundedBorder)
-                }
-                GridRow {
-                    Text("模型")
-                        .foregroundStyle(.secondary)
-                    TextField("qwen3.5:0.8b", text: $ollama.model)
-                        .textFieldStyle(.roundedBorder)
-                }
-                GridRow {
-                    Text("超时")
-                        .foregroundStyle(.secondary)
-                    HStack {
-                        Slider(value: $ollama.timeout, in: 5...60, step: 1)
-                        Text("\(Int(ollama.timeout)) 秒")
-                            .font(.system(.caption, design: .monospaced))
+            if ollama.isEnabled {
+                Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
+                    GridRow {
+                        Text("地址")
                             .foregroundStyle(.secondary)
-                            .frame(width: 52, alignment: .trailing)
+                        TextField("http://127.0.0.1:11434", text: $ollama.endpointText)
+                            .textFieldStyle(.roundedBorder)
+                    }
+                    GridRow {
+                        Text("模型")
+                            .foregroundStyle(.secondary)
+                        HStack(spacing: 8) {
+                            TextField("qwen3.5:0.8b", text: $ollama.model)
+                                .textFieldStyle(.roundedBorder)
+                            Button(action: runConnectionTest) {
+                                if testState == .running {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                        .frame(width: 14, height: 14)
+                                } else {
+                                    Text("测试")
+                                }
+                            }
+                            .disabled(testState == .running)
+                        }
+                    }
+                    GridRow {
+                        Text("超时")
+                            .foregroundStyle(.secondary)
+                        HStack {
+                            Slider(value: $ollama.timeout, in: 5...60, step: 1)
+                            Text("\(Int(ollama.timeout)) 秒")
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 52, alignment: .trailing)
+                        }
                     }
                 }
-            }
-            .disabled(!ollama.isEnabled)
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text("自定义 Prompt")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                TextEditor(text: $ollama.prompt)
-                    .font(.system(.body, design: .default))
-                    .frame(minHeight: 92)
-                    .scrollContentBackground(.hidden)
-                    .background(Color(nsColor: .textBackgroundColor))
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(Color.secondary.opacity(0.25), lineWidth: 1)
-                    )
-                    .disabled(!ollama.isEnabled)
+                if let message = testStatusMessage {
+                    HStack(spacing: 6) {
+                        Image(systemName: testStatusIcon)
+                            .foregroundStyle(testStatusColor)
+                        Text(message)
+                            .font(.caption)
+                            .foregroundStyle(testStatusColor)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("自定义 Prompt")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    TextEditor(text: $ollama.prompt)
+                        .font(.system(.body, design: .default))
+                        .frame(minHeight: 92)
+                        .scrollContentBackground(.hidden)
+                        .background(Color(nsColor: .textBackgroundColor))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color.secondary.opacity(0.25), lineWidth: 1)
+                        )
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .animation(.easeInOut(duration: 0.2), value: ollama.isEnabled)
+    }
+
+    private var testStatusMessage: String? {
+        switch testState {
+        case .idle: return nil
+        case .running: return "正在连接 Ollama…"
+        case .success: return "连接成功，模型可用。"
+        case .failure(let reason): return reason
+        }
+    }
+
+    private var testStatusIcon: String {
+        switch testState {
+        case .success: return "checkmark.circle.fill"
+        case .failure: return "exclamationmark.triangle.fill"
+        default: return "info.circle"
+        }
+    }
+
+    private var testStatusColor: Color {
+        switch testState {
+        case .success: return .green
+        case .failure: return .red
+        default: return .secondary
+        }
+    }
+
+    private func runConnectionTest() {
+        guard let configuration = ollama.configuration else {
+            testState = .failure("地址无效，请检查后重试。")
+            return
+        }
+        testState = .running
+        Task {
+            let polisher = OllamaTextPolisher()
+            do {
+                try await polisher.testConnection(configuration: configuration)
+                await MainActor.run { testState = .success }
+            } catch {
+                let reason = Self.describe(error: error)
+                await MainActor.run { testState = .failure(reason) }
+            }
+        }
+    }
+
+    private static func describe(error: Swift.Error) -> String {
+        if let polishError = error as? OllamaTextPolisher.Error {
+            switch polishError {
+            case .invalidConfiguration: return "模型名称为空。"
+            case .modelNotFound(let model): return "模型「\(model)」不存在，请先 ollama pull。"
+            case .invalidHTTPStatus(let code): return "服务返回 HTTP \(code)。"
+            case .emptyResponse: return "服务返回了空响应。"
+            }
+        }
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .timedOut: return "连接超时，请检查地址或调高超时时间。"
+            case .cannotConnectToHost, .cannotFindHost:
+                return "无法连接到 Ollama 服务，请确认已启动。"
+            default: return urlError.localizedDescription
+            }
+        }
+        return error.localizedDescription
     }
 }
 

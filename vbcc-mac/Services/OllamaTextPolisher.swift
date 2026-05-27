@@ -31,6 +31,7 @@ nonisolated final class OllamaTextPolisher {
         case invalidConfiguration
         case invalidHTTPStatus(Int)
         case emptyResponse
+        case modelNotFound(String)
     }
 
     private let session: URLSession
@@ -78,5 +79,28 @@ nonisolated final class OllamaTextPolisher {
 
         \(transcript)
         """
+    }
+
+    /// Verifies the endpoint is reachable and the configured model exists.
+    /// Throws `Error.modelNotFound` when the server responds 404, `invalidHTTPStatus` for other HTTP errors,
+    /// or rethrows the underlying URLError on connection failure.
+    func testConnection(configuration: OllamaConfiguration) async throws {
+        let model = configuration.model.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !model.isEmpty else { throw Error.invalidConfiguration }
+
+        var request = URLRequest(url: configuration.endpoint.appendingPathComponent("api/show"))
+        request.httpMethod = "POST"
+        request.timeoutInterval = configuration.timeout
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["model": model])
+
+        let (_, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { return }
+        if http.statusCode == 404 {
+            throw Error.modelNotFound(model)
+        }
+        if !(200...299).contains(http.statusCode) {
+            throw Error.invalidHTTPStatus(http.statusCode)
+        }
     }
 }

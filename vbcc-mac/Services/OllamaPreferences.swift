@@ -38,7 +38,7 @@ final class OllamaPreferences: ObservableObject {
         self.model = defaults.string(forKey: Keys.model) ?? "qwen3.5:0.8b"
         self.prompt = defaults.string(forKey: Keys.prompt) ?? Self.defaultPrompt
         let storedTimeout = defaults.double(forKey: Keys.timeout)
-        self.timeout = storedTimeout > 0 ? storedTimeout : 20
+        self.timeout = storedTimeout > 0 ? storedTimeout : 5
     }
 
     var configuration: OllamaConfiguration? {
