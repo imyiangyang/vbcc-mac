@@ -37,7 +37,10 @@ struct DevicesPage: View {
                 floatingDevicesPanel
                     .padding(.horizontal, 16)
                     .offset(y: headerHeight)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .scale(scale: 0.96, anchor: .top)),
+                        removal: .opacity
+                    ))
                     .zIndex(1)
             }
         }
