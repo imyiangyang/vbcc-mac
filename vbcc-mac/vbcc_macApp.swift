@@ -10,14 +10,21 @@ struct vbcc_macApp: App {
     @StateObject private var tokens: TokenStore
     @StateObject private var server: VBCCServer
     @StateObject private var ollama: OllamaPreferences
+    @StateObject private var transcripts: TranscriptStore
     @StateObject private var ax = AccessibilityStatus()
 
     init() {
         let store = TokenStore()
         let ollamaPreferences = OllamaPreferences()
+        let transcriptStore = TranscriptStore()
         _tokens = StateObject(wrappedValue: store)
         _ollama = StateObject(wrappedValue: ollamaPreferences)
-        _server = StateObject(wrappedValue: VBCCServer(tokens: store, ollamaPreferences: ollamaPreferences))
+        _transcripts = StateObject(wrappedValue: transcriptStore)
+        _server = StateObject(wrappedValue: VBCCServer(
+            tokens: store,
+            ollamaPreferences: ollamaPreferences,
+            transcripts: transcriptStore
+        ))
     }
 
     var body: some Scene {
@@ -26,9 +33,10 @@ struct vbcc_macApp: App {
                 .environmentObject(server)
                 .environmentObject(tokens)
                 .environmentObject(ollama)
+                .environmentObject(transcripts)
                 .environmentObject(ax)
                 .onAppear { server.start() }
         }
-        .defaultSize(width: 560, height: 520)
+        .defaultSize(width: 880, height: 640)
     }
 }

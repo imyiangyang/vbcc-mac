@@ -43,6 +43,7 @@ final class VBCCServer: ObservableObject {
 
     let tokens: TokenStore
     let ollamaPreferences: OllamaPreferences
+    let transcripts: TranscriptStore
     private let injector = TextInjector()
     private let textPolisher: OllamaTextPolisher
 
@@ -75,10 +76,12 @@ final class VBCCServer: ObservableObject {
     init(
         tokens: TokenStore,
         ollamaPreferences: OllamaPreferences = OllamaPreferences(),
+        transcripts: TranscriptStore? = nil,
         textPolisher: OllamaTextPolisher = OllamaTextPolisher()
     ) {
         self.tokens = tokens
         self.ollamaPreferences = ollamaPreferences
+        self.transcripts = transcripts ?? MainActor.assumeIsolated { TranscriptStore() }
         self.textPolisher = textPolisher
     }
 
@@ -261,7 +264,7 @@ final class VBCCServer: ObservableObject {
 
             case .inputText(let env):
                 guard requireEstablished(session, replyTo: env.id, on: conn) else { return }
-                handleInputText(env: env, on: conn)
+                handleInputText(env: env, session: session, on: conn)
 
             case .inputKey(let env):
                 guard requireEstablished(session, replyTo: env.id, on: conn) else { return }
@@ -434,18 +437,32 @@ final class VBCCServer: ObservableObject {
 
     // MARK: - 输入：input.text
 
-    private func handleInputText(env: Envelope<InputTextPayload>, on conn: NWConnection) {
+    private func handleInputText(env: Envelope<InputTextPayload>, session: ClientSession, on conn: NWConnection) {
         let text = env.payload.text
         let sendEnter = env.payload.sendEnter
         let preview = text.count > 30 ? String(text.prefix(30)) + "…" : text
         appendLog("⌨️ input.text \"\(preview)\" enter=\(sendEnter)")
 
+        let device: PairedDevice? = {
+            if case let .established(device) = session.phase { return device }
+            return nil
+        }()
+
         Task { @MainActor [weak self] in
             guard let self else { return }
-            let textToInject = await self.textForInjection(original: text)
+            let polishResult = await self.textForInjection(original: text)
+            let textToInject = polishResult.text
             let ok = await self.injector.inject(textToInject, sendEnter: sendEnter)
             if !ok {
                 self.appendLog("🚫 注入失败：缺少 Accessibility 权限")
+            }
+            if let device {
+                self.transcripts.append(Transcript(
+                    deviceToken: device.token,
+                    deviceName: device.deviceName,
+                    originalText: text,
+                    polishedText: polishResult.polished ? textToInject : nil
+                ))
             }
             self.send(Envelope(
                 type: .ack,
@@ -455,26 +472,27 @@ final class VBCCServer: ObservableObject {
         }
     }
 
-    private func textForInjection(original text: String) async -> String {
+    private func textForInjection(original text: String) async -> (text: String, polished: Bool) {
         guard let configuration = ollamaPreferences.configuration, configuration.enabled else {
-            return text
+            return (text, false)
         }
 
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return text
+            return (text, false)
         }
 
         do {
             let polished = try await textPolisher.polish(text, configuration: configuration)
             if polished != text {
                 appendLog("🪄 Ollama 已整理语音文本")
+                return (polished, true)
             } else {
                 appendLog("🪄 Ollama 返回原文")
+                return (polished, false)
             }
-            return polished
         } catch {
             appendLog("⚠️ Ollama 整理失败，使用原文：\(error)")
-            return text
+            return (text, false)
         }
     }
 
