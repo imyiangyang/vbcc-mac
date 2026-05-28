@@ -2,7 +2,7 @@
 //  DevicesPage.swift
 //  vbcc-mac
 //
-//  设备页：状态条 + 配对数字 + 可折叠设备列表（展开后浮动） + iMessage 风格语音气泡。
+//  设备页：状态条 + 配对数字 + 可折叠设备列表（在原位置悬浮展开） + iMessage 风格语音气泡。
 //
 
 import SwiftUI
@@ -15,43 +15,48 @@ struct DevicesPage: View {
     @EnvironmentObject private var transcripts: TranscriptStore
 
     @State private var devicesExpanded: Bool = false
-    @State private var headerHeight: CGFloat = 0
+    @State private var barFrame: CGRect = .zero
+
+    private let pageSpace = "DevicesPage"
 
     var body: some View {
-        VStack(spacing: 0) {
-            headerStack
-                .background(
-                    GeometryReader { geo in
-                        Color.clear
-                            .preference(key: HeaderHeightKey.self, value: geo.size.height)
-                    }
-                )
+        ZStack(alignment: .topLeading) {
+            VStack(spacing: 0) {
+                headerStack
 
-            Divider()
+                Divider()
 
-            TranscriptChatView()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .overlay(alignment: .top) {
+                TranscriptChatView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .coordinateSpace(name: pageSpace)
+
+            // 点击空白关闭浮层
             if devicesExpanded {
+                Color.black.opacity(0.001)
+                    .ignoresSafeArea()
+                    .onTapGesture { devicesExpanded = false }
+                    .transition(.opacity)
+                    .zIndex(1)
+
+                // 悬浮卡片：精确盖在「已配对设备」按钮位置
                 floatingDevicesPanel
-                    .padding(.horizontal, 16)
-                    .offset(y: headerHeight)
+                    .frame(width: barFrame.width)
+                    .offset(x: barFrame.minX, y: barFrame.minY)
                     .transition(.asymmetric(
-                        insertion: .opacity.combined(with: .scale(scale: 0.96, anchor: .top)),
+                        insertion: .opacity.combined(with: .scale(scale: 0.97, anchor: .top)),
                         removal: .opacity
                     ))
-                    .zIndex(1)
+                    .zIndex(2)
             }
         }
-        .onPreferenceChange(HeaderHeightKey.self) { headerHeight = $0 }
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: server.pendingPair)
         .animation(.easeInOut(duration: 0.25), value: ax.isTrusted)
-        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: devicesExpanded)
+        .animation(.spring(response: 0.28, dampingFraction: 0.85), value: devicesExpanded)
         .navigationTitle("设备")
     }
 
-    // MARK: - 顶部 Header（status + 横幅 + 配对 + 设备折叠条）
+    // MARK: - 顶部 Header
 
     private var headerStack: some View {
         VStack(spacing: 12) {
@@ -72,7 +77,7 @@ struct DevicesPage: View {
         .background(Color(nsColor: .windowBackgroundColor))
     }
 
-    // MARK: - 设备折叠条（始终可见）
+    // MARK: - 设备折叠条（始终可见，作为悬浮卡片的锚点）
 
     private var devicesHeaderBar: some View {
         Button {
@@ -97,44 +102,53 @@ struct DevicesPage: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .background(
+            GeometryReader { geo in
+                Color.clear.preference(
+                    key: BarFrameKey.self,
+                    value: geo.frame(in: .named(pageSpace))
+                )
+            }
+        )
+        .onPreferenceChange(BarFrameKey.self) { barFrame = $0 }
+        // 浮层占据折叠条位置时，保留原位空间但隐藏内容
+        .opacity(devicesExpanded ? 0 : 1)
     }
 
-    // MARK: - 浮动设备列表
+    // MARK: - 浮动设备列表（在 headerBar 原位置展开）
 
     private var floatingDevicesPanel: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("已配对设备 (\(tokens.devices.count))")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                if !tokens.devices.isEmpty {
-                    Button("全部吊销", role: .destructive) {
-                        for d in tokens.devices {
-                            server.revoke(token: d.token)
-                        }
-                    }
-                    .controlSize(.small)
-                }
-                Button {
-                    devicesExpanded = false
-                } label: {
-                    Image(systemName: "xmark")
+        VStack(alignment: .leading, spacing: 0) {
+            // 标题条：和折叠条尺寸一致，点击可收起
+            Button {
+                devicesExpanded = false
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "chevron.right")
                         .font(.caption.weight(.semibold))
+                        .rotationEffect(.degrees(90))
                         .foregroundStyle(.secondary)
-                        .padding(4)
-                        .contentShape(Rectangle())
+                    Text("已配对设备 (\(tokens.devices.count))")
+                        .font(.headline)
+                    Spacer()
+                    Text("收起")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-                .buttonStyle(.plain)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
 
-            Divider()
+            Divider().opacity(0.5)
 
             if tokens.devices.isEmpty {
                 Text("还没有配对设备。在 iPhone 上发起配对，这里会显示一个配对数字。")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                    .padding(.vertical, 8)
+                    .padding(12)
             } else {
                 ScrollView {
                     VStack(spacing: 0) {
@@ -142,23 +156,36 @@ struct DevicesPage: View {
                             DeviceRow(device: device) {
                                 server.revoke(token: device.token)
                             }
+                            .padding(.horizontal, 12)
                             if device.id != tokens.devices.last?.id {
-                                Divider().opacity(0.5)
+                                Divider().opacity(0.4).padding(.leading, 12)
                             }
                         }
                     }
                 }
                 .frame(maxHeight: 280)
+
+                Divider().opacity(0.5)
+
+                HStack {
+                    Spacer()
+                    Button("全部吊销", role: .destructive) {
+                        for d in tokens.devices {
+                            server.revoke(token: d.token)
+                        }
+                    }
+                    .controlSize(.small)
+                }
+                .padding(8)
             }
         }
-        .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: 10)
                 .fill(.regularMaterial)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.secondary.opacity(0.2), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.secondary.opacity(0.25), lineWidth: 0.5)
         )
         .shadow(color: .black.opacity(0.18), radius: 14, x: 0, y: 6)
     }
@@ -208,11 +235,11 @@ struct DevicesPage: View {
     }
 }
 
-// MARK: - 测量 header 高度的 PreferenceKey
+// MARK: - 折叠条 frame 测量
 
-private struct HeaderHeightKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+private struct BarFrameKey: PreferenceKey {
+    static let defaultValue: CGRect = .zero
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
         value = nextValue()
     }
 }
