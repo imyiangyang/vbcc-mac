@@ -16,6 +16,7 @@ struct DevicesPage: View {
 
     @State private var devicesExpanded: Bool = false
     @State private var barFrame: CGRect = .zero
+    @State private var rowHeight: CGFloat = 0
 
     private let pageSpace = "DevicesPage"
 
@@ -117,6 +118,14 @@ struct DevicesPage: View {
 
     // MARK: - 浮动设备列表（在 headerBar 原位置展开）
 
+    /// 浮层 ScrollView 上限：最多 3 行 + 行间 Divider，未测量到时给一个保守上限
+    private var scrollMaxHeight: CGFloat {
+        guard rowHeight > 0 else { return 240 }
+        let visible = min(tokens.devices.count, 3)
+        let dividers = max(0, visible - 1)
+        return rowHeight * CGFloat(visible) + CGFloat(dividers)
+    }
+
     private var floatingDevicesPanel: some View {
         VStack(alignment: .leading, spacing: 0) {
             // 标题条：和折叠条尺寸一致，点击可收起
@@ -152,18 +161,28 @@ struct DevicesPage: View {
             } else {
                 ScrollView {
                     VStack(spacing: 0) {
-                        ForEach(tokens.devices) { device in
+                        ForEach(Array(tokens.devices.enumerated()), id: \.element.id) { index, device in
                             DeviceRow(device: device) {
                                 server.revoke(token: device.token)
                             }
                             .padding(.horizontal, 12)
+                            .background(
+                                // 用第一行测量单行高度
+                                index == 0 ? GeometryReader { geo in
+                                    Color.clear.preference(
+                                        key: RowHeightKey.self,
+                                        value: geo.size.height
+                                    )
+                                } : nil
+                            )
                             if device.id != tokens.devices.last?.id {
                                 Divider().opacity(0.4).padding(.leading, 12)
                             }
                         }
                     }
                 }
-                .frame(maxHeight: 280)
+                .frame(maxHeight: scrollMaxHeight)
+                .onPreferenceChange(RowHeightKey.self) { rowHeight = $0 }
 
                 Divider().opacity(0.5)
 
@@ -241,6 +260,16 @@ private struct BarFrameKey: PreferenceKey {
     static let defaultValue: CGRect = .zero
     static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
         value = nextValue()
+    }
+}
+
+// MARK: - 单行设备行高度测量
+
+private struct RowHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        let next = nextValue()
+        if next > 0 { value = next }
     }
 }
 
