@@ -10,7 +10,6 @@ import Foundation
 import Combine
 
 nonisolated struct OllamaConfiguration: Equatable {
-    var enabled: Bool
     var endpoint: URL
     var model: String
     var prompt: String
@@ -18,7 +17,6 @@ nonisolated struct OllamaConfiguration: Equatable {
 }
 
 nonisolated struct ArkConfiguration: Equatable {
-    var enabled: Bool
     var baseURL: URL
     var apiKey: String
     var model: String
@@ -107,7 +105,6 @@ final class PolishPreferences: ObservableObject {
         guard !trimmedModel.isEmpty,
               let url = URL(string: trimmedEndpoint) else { return nil }
         return OllamaConfiguration(
-            enabled: isEnabled,
             endpoint: url,
             model: trimmedModel,
             prompt: prompt,
@@ -122,7 +119,6 @@ final class PolishPreferences: ObservableObject {
         guard !trimmedModel.isEmpty, !key.isEmpty,
               let url = URL(string: trimmedBase) else { return nil }
         return ArkConfiguration(
-            enabled: isEnabled,
             baseURL: url,
             apiKey: key,
             model: trimmedModel,
