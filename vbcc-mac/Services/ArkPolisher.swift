@@ -44,22 +44,20 @@ nonisolated final class ArkPolisher: TranscriptPolishing {
 
     init(baseURL: URL, apiKey: String, model: String, timeout: TimeInterval, session: URLSession = .shared) {
         self.baseURL = baseURL
-        self.apiKey = apiKey
-        self.model = model
+        self.apiKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.model = model.trimmingCharacters(in: .whitespacesAndNewlines)
         self.timeout = timeout
         self.session = session
     }
 
     func polish(_ text: String, prompt: String) async throws -> String {
-        let trimmedKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedModel = model.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedKey.isEmpty, !trimmedModel.isEmpty, !trimmedPrompt.isEmpty else {
+        guard !apiKey.isEmpty, !model.isEmpty, !trimmedPrompt.isEmpty else {
             throw Error.invalidConfiguration
         }
 
         let payload = ChatRequest(
-            model: trimmedModel,
+            model: model,
             messages: [
                 Message(role: "system", content: "\(trimmedPrompt)\n\n\(polishGuardSuffix)"),
                 Message(role: "user", content: text)
@@ -70,7 +68,7 @@ nonisolated final class ArkPolisher: TranscriptPolishing {
 
         let request = try buildRequest(body: try JSONEncoder().encode(payload))
         let (data, response) = try await session.data(for: request)
-        try Self.validate(response: response, model: trimmedModel)
+        try Self.validate(response: response, model: model)
 
         let decoded = try JSONDecoder().decode(ChatResponse.self, from: data)
         let content = decoded.choices.first?.message.content ?? ""
@@ -80,14 +78,12 @@ nonisolated final class ArkPolisher: TranscriptPolishing {
     }
 
     func testConnection() async throws {
-        let trimmedKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedModel = model.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedKey.isEmpty, !trimmedModel.isEmpty else {
+        guard !apiKey.isEmpty, !model.isEmpty else {
             throw Error.invalidConfiguration
         }
 
         let payload = ChatRequest(
-            model: trimmedModel,
+            model: model,
             messages: [Message(role: "user", content: "ping")],
             stream: false,
             max_tokens: 1
@@ -95,7 +91,7 @@ nonisolated final class ArkPolisher: TranscriptPolishing {
 
         let request = try buildRequest(body: try JSONEncoder().encode(payload))
         let (_, response) = try await session.data(for: request)
-        try Self.validate(response: response, model: trimmedModel)
+        try Self.validate(response: response, model: model)
     }
 
     private func buildRequest(body: Data) throws -> URLRequest {
