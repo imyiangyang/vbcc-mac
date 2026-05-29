@@ -35,11 +35,26 @@ enum SidebarItem: Hashable, CaseIterable, Identifiable {
 struct ContentView: View {
     @State private var selection: SidebarItem? = .devices
 
+    private static let topItems: [SidebarItem] = [.devices, .polish]
+
     var body: some View {
         NavigationSplitView {
-            List(SidebarItem.allCases, selection: $selection) { item in
-                Label(item.title, systemImage: item.systemImage)
-                    .tag(item)
+            VStack(spacing: 0) {
+                List(Self.topItems, selection: $selection) { item in
+                    Label(item.title, systemImage: item.systemImage)
+                        .tag(item)
+                }
+                .listStyle(.sidebar)
+
+                Divider()
+
+                List(selection: $selection) {
+                    Label(SidebarItem.log.title, systemImage: SidebarItem.log.systemImage)
+                        .tag(SidebarItem.log)
+                }
+                .listStyle(.sidebar)
+                .scrollDisabled(true)
+                .frame(height: 44)
             }
             .navigationSplitViewColumnWidth(min: 160, ideal: 180, max: 220)
         } detail: {
