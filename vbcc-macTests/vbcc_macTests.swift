@@ -60,6 +60,21 @@ struct vbcc_macTests {
         }
     }
 
+    @MainActor
+    @Test func keychainStoreSetGetDeleteRoundTrip() async throws {
+        let testAccount = "vbcc.tests.keychain.\(UUID().uuidString)"
+        defer { KeychainStore.set(nil, forAccount: testAccount) }
+
+        KeychainStore.set("hello", forAccount: testAccount)
+        #expect(KeychainStore.get(forAccount: testAccount) == "hello")
+
+        KeychainStore.set("world", forAccount: testAccount)
+        #expect(KeychainStore.get(forAccount: testAccount) == "world")
+
+        KeychainStore.set(nil, forAccount: testAccount)
+        #expect(KeychainStore.get(forAccount: testAccount) == nil)
+    }
+
 }
 
 private final class URLProtocolMock: URLProtocol {
