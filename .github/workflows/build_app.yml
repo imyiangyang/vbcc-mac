@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Show Xcode version
         run: xcodebuild -version
@@ -25,6 +25,7 @@ jobs:
             -scheme vbcc-mac \
             -configuration Debug \
             -destination 'platform=macOS' \
+            -derivedDataPath build \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
@@ -36,7 +37,21 @@ jobs:
             -scheme vbcc-mac \
             -configuration Debug \
             -destination 'platform=macOS' \
+            -derivedDataPath build \
             -only-testing:vbcc-macTests \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
+
+      - name: Package .app as zip
+        run: |
+          cd build/Build/Products/Debug
+          ditto -c -k --sequesterRsrc --keepParent vbcc-mac.app vbcc-mac.zip
+
+      - name: Upload artifact (unsigned)
+        uses: actions/upload-artifact@v4
+        with:
+          name: vbcc-mac-unsigned-${{ github.sha }}
+          path: build/Build/Products/Debug/vbcc-mac.zip
+          if-no-files-found: error
+          retention-days: 30
