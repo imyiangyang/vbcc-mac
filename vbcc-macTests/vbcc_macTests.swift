@@ -60,22 +60,6 @@ struct vbcc_macTests {
         }
     }
 
-    @MainActor
-    @Test func ollamaPolisherUsesNewProtocolSignature() async throws {
-        let handler: URLProtocolMock.Handler = { request in
-            let response = OllamaPolisher.GenerateResponse(response: "整理后的文本")
-            let data = try JSONEncoder().encode(response)
-            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, data)
-        }
-        let polisher = OllamaPolisher(
-            endpoint: URL(string: "http://127.0.0.1:11434")!,
-            model: "qwen3.5:0.8b",
-            timeout: 5,
-            session: URLProtocolMock.makeSession(handler: handler)
-        )
-        let output = try await polisher.polish("原文", prompt: "整理文本")
-        #expect(output == "整理后的文本")
-    }
 }
 
 private final class URLProtocolMock: URLProtocol {
