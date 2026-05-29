@@ -2,7 +2,7 @@
 //  ContentView.swift
 //  vbcc-mac
 //
-//  侧边栏布局：设备 / 日志 / Ollama 三个一级页面。
+//  侧边栏布局：设备 / 日志 / 模型配置 三个一级页面。
 //
 
 import SwiftUI
@@ -11,7 +11,7 @@ import Combine
 enum SidebarItem: Hashable, CaseIterable, Identifiable {
     case devices
     case log
-    case ollama
+    case polish
 
     var id: Self { self }
 
@@ -19,7 +19,7 @@ enum SidebarItem: Hashable, CaseIterable, Identifiable {
         switch self {
         case .devices: return "设备"
         case .log:     return "日志"
-        case .ollama:  return "Ollama"
+        case .polish:  return "模型配置"
         }
     }
 
@@ -27,7 +27,7 @@ enum SidebarItem: Hashable, CaseIterable, Identifiable {
         switch self {
         case .devices: return "iphone.gen3"
         case .log:     return "text.alignleft"
-        case .ollama:  return "wand.and.sparkles"
+        case .polish:  return "wand.and.sparkles"
         }
     }
 }
@@ -46,7 +46,7 @@ struct ContentView: View {
             switch selection ?? .devices {
             case .devices: DevicesPage()
             case .log:     LogPage()
-            case .ollama:  OllamaPage()
+            case .polish:  PolishPage()
             }
         }
         .frame(minWidth: 820, minHeight: 600)
