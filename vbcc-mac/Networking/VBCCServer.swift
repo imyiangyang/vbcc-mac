@@ -488,9 +488,17 @@ final class VBCCServer: ObservableObject {
             )
             return await runPolish(polisher: polisher, prompt: cfg.prompt, text: text, label: "Ollama")
         case .ark:
-            // Task 5 接入
-            appendLog("⚠️ 豆包 provider 尚未接入,使用原文")
-            return (text, false)
+            guard let cfg = polishPreferences.arkConfig else {
+                appendLog("⚠️ 豆包配置不完整,跳过整理")
+                return (text, false)
+            }
+            let polisher = ArkPolisher(
+                baseURL: cfg.baseURL,
+                apiKey: cfg.apiKey,
+                model: cfg.model,
+                timeout: cfg.timeout
+            )
+            return await runPolish(polisher: polisher, prompt: cfg.prompt, text: text, label: "豆包")
         }
     }
 

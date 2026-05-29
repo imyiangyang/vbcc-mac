@@ -147,6 +147,100 @@ struct vbcc_macTests {
         #expect(cfg?.timeout == 5)
     }
 
+    @MainActor
+    @Test func arkPolisherSendsBearerAuthAndOpenAICompatibleRequest() async throws {
+        let handler: URLProtocolMock.Handler = { request in
+            #expect(request.url?.absoluteString == "https://example.com/api/v3/chat/completions")
+            #expect(request.httpMethod == "POST")
+            #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer sk-secret")
+            #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
+
+            guard let body = request.httpBody ?? request.httpBodyStream?.readAllData() else {
+                Issue.record("Request body should be present")
+                throw URLError(.badServerResponse)
+            }
+            let payload = try JSONDecoder().decode(ArkPolisher.ChatRequest.self, from: body)
+
+            #expect(payload.model == "doubao-test")
+            #expect(payload.stream == false)
+            #expect(payload.messages.count == 2)
+            #expect(payload.messages[0].role == "system")
+            #expect(payload.messages[0].content.contains("整理文本"))
+            #expect(payload.messages[0].content.contains("整理后的文本"))  // polishGuardSuffix 片段
+            #expect(payload.messages[1].role == "user")
+            #expect(payload.messages[1].content == "原文")
+
+            let response = ArkPolisher.ChatResponse(
+                choices: [.init(message: .init(role: "assistant", content: "  整理后的内容  "))]
+            )
+            let data = try JSONEncoder().encode(response)
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, data)
+        }
+
+        let polisher = ArkPolisher(
+            baseURL: URL(string: "https://example.com/api/v3/")!,  // 末尾 / 应被清掉
+            apiKey: "sk-secret",
+            model: "doubao-test",
+            timeout: 5,
+            session: URLProtocolMock.makeSession(handler: handler)
+        )
+
+        let output = try await polisher.polish("原文", prompt: "整理文本")
+        #expect(output == "整理后的内容")
+    }
+
+    @MainActor
+    @Test func arkPolisherMaps401ToUnauthorized() async throws {
+        let handler: URLProtocolMock.Handler = { request in
+            let body = "{\"error\":{\"message\":\"unauthorized\"}}".data(using: .utf8)!
+            return (HTTPURLResponse(url: request.url!, statusCode: 401, httpVersion: nil, headerFields: nil)!, body)
+        }
+        let polisher = ArkPolisher(
+            baseURL: URL(string: "https://example.com/api/v3")!,
+            apiKey: "bad",
+            model: "doubao-test",
+            timeout: 5,
+            session: URLProtocolMock.makeSession(handler: handler)
+        )
+
+        await #expect(throws: ArkPolisher.Error.unauthorized) {
+            try await polisher.polish("原文", prompt: "整理文本")
+        }
+    }
+
+    @MainActor
+    @Test func arkPolisherMaps404ToModelNotFound() async throws {
+        let handler: URLProtocolMock.Handler = { request in
+            let body = Data()
+            return (HTTPURLResponse(url: request.url!, statusCode: 404, httpVersion: nil, headerFields: nil)!, body)
+        }
+        let polisher = ArkPolisher(
+            baseURL: URL(string: "https://example.com/api/v3")!,
+            apiKey: "sk",
+            model: "ghost-model",
+            timeout: 5,
+            session: URLProtocolMock.makeSession(handler: handler)
+        )
+
+        await #expect(throws: ArkPolisher.Error.modelNotFound("ghost-model")) {
+            try await polisher.polish("原文", prompt: "整理文本")
+        }
+    }
+
+    @MainActor
+    @Test func arkPolisherRejectsEmptyConfigurationBeforeNetwork() async throws {
+        let polisher = ArkPolisher(
+            baseURL: URL(string: "https://example.com/api/v3")!,
+            apiKey: "",
+            model: "doubao-test",
+            timeout: 5,
+            session: URLSession(configuration: .ephemeral)
+        )
+        await #expect(throws: ArkPolisher.Error.invalidConfiguration) {
+            try await polisher.polish("原文", prompt: "整理文本")
+        }
+    }
+
 }
 
 private final class URLProtocolMock: URLProtocol {
