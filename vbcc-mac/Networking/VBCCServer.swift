@@ -45,7 +45,6 @@ final class VBCCServer: ObservableObject {
     let ollamaPreferences: OllamaPreferences
     let transcripts: TranscriptStore
     private let injector = TextInjector()
-    private let textPolisher: OllamaTextPolisher
 
     // MARK: - 配对配置
 
@@ -76,13 +75,11 @@ final class VBCCServer: ObservableObject {
     init(
         tokens: TokenStore,
         ollamaPreferences: OllamaPreferences = OllamaPreferences(),
-        transcripts: TranscriptStore? = nil,
-        textPolisher: OllamaTextPolisher = OllamaTextPolisher()
+        transcripts: TranscriptStore? = nil
     ) {
         self.tokens = tokens
         self.ollamaPreferences = ollamaPreferences
         self.transcripts = transcripts ?? MainActor.assumeIsolated { TranscriptStore() }
-        self.textPolisher = textPolisher
     }
 
     // MARK: - 生命周期
@@ -481,8 +478,14 @@ final class VBCCServer: ObservableObject {
             return (text, false)
         }
 
+        let polisher = OllamaPolisher(
+            endpoint: configuration.endpoint,
+            model: configuration.model,
+            timeout: configuration.timeout
+        )
+
         do {
-            let polished = try await textPolisher.polish(text, configuration: configuration)
+            let polished = try await polisher.polish(text, prompt: configuration.prompt)
             if polished != text {
                 appendLog("🪄 Ollama 已整理语音文本")
                 return (polished, true)
@@ -491,7 +494,7 @@ final class VBCCServer: ObservableObject {
                 return (polished, false)
             }
         } catch {
-            appendLog("⚠️ Ollama 整理失败，使用原文：\(error)")
+            appendLog("⚠️ Ollama 整理失败,使用原文:\(error)")
             return (text, false)
         }
     }

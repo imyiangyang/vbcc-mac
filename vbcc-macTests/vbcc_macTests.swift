@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import vbcc_mac
 
+@Suite(.serialized)
 struct vbcc_macTests {
 
     @MainActor
@@ -21,47 +22,59 @@ struct vbcc_macTests {
                 Issue.record("Request body should be present")
                 throw URLError(.badServerResponse)
             }
-            let payload = try JSONDecoder().decode(OllamaTextPolisher.GenerateRequest.self, from: body)
+            let payload = try JSONDecoder().decode(OllamaPolisher.GenerateRequest.self, from: body)
 
             #expect(payload.model == "qwen3.5:0.8b")
             #expect(payload.think == false)
             #expect(payload.stream == false)
-            #expect(payload.prompt.contains("修正错别字"))
+            #expect(payload.system.contains("修正错别字"))
             #expect(payload.prompt.contains("呃今天meetng改到三点"))
 
-            let response = OllamaTextPolisher.GenerateResponse(response: "\n今天 meeting 改到三点。\n")
+            let response = OllamaPolisher.GenerateResponse(response: "\n今天 meeting 改到三点。\n")
             let data = try JSONEncoder().encode(response)
             return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, data)
         }
 
-        let polisher = OllamaTextPolisher(session: URLProtocolMock.makeSession(handler: handler))
-        let config = OllamaConfiguration(
-            enabled: true,
+        let polisher = OllamaPolisher(
             endpoint: URL(string: "http://127.0.0.1:11434")!,
             model: "qwen3.5:0.8b",
-            prompt: "修正错别字，保留中英双语表达。",
-            timeout: 5
+            timeout: 5,
+            session: URLProtocolMock.makeSession(handler: handler)
         )
-
-        let output = try await polisher.polish("呃今天meetng改到三点", configuration: config)
+        let output = try await polisher.polish("呃今天meetng改到三点", prompt: "修正错别字，保留中英双语表达。")
 
         #expect(output == "今天 meeting 改到三点。")
     }
 
     @MainActor
     @Test func ollamaPolisherRejectsEmptyModelBeforeNetworkCall() async throws {
-        let polisher = OllamaTextPolisher(session: URLSession(configuration: .ephemeral))
-        let config = OllamaConfiguration(
-            enabled: true,
+        let polisher = OllamaPolisher(
             endpoint: URL(string: "http://127.0.0.1:11434")!,
             model: "   ",
-            prompt: "整理文本",
-            timeout: 5
+            timeout: 5,
+            session: URLSession(configuration: .ephemeral)
         )
 
-        await #expect(throws: OllamaTextPolisher.Error.invalidConfiguration) {
-            try await polisher.polish("原文", configuration: config)
+        await #expect(throws: OllamaPolisher.Error.invalidConfiguration) {
+            try await polisher.polish("原文", prompt: "整理文本")
         }
+    }
+
+    @MainActor
+    @Test func ollamaPolisherUsesNewProtocolSignature() async throws {
+        let handler: URLProtocolMock.Handler = { request in
+            let response = OllamaPolisher.GenerateResponse(response: "整理后的文本")
+            let data = try JSONEncoder().encode(response)
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, data)
+        }
+        let polisher = OllamaPolisher(
+            endpoint: URL(string: "http://127.0.0.1:11434")!,
+            model: "qwen3.5:0.8b",
+            timeout: 5,
+            session: URLProtocolMock.makeSession(handler: handler)
+        )
+        let output = try await polisher.polish("原文", prompt: "整理文本")
+        #expect(output == "整理后的文本")
     }
 }
 

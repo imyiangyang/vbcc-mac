@@ -8,6 +8,14 @@
 import Foundation
 import Combine
 
+nonisolated struct OllamaConfiguration: Equatable {
+    var enabled: Bool
+    var endpoint: URL
+    var model: String
+    var prompt: String
+    var timeout: TimeInterval
+}
+
 final class OllamaPreferences: ObservableObject {
     @Published var isEnabled: Bool {
         didSet { defaults.set(isEnabled, forKey: Keys.isEnabled) }

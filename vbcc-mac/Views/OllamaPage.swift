@@ -187,9 +187,13 @@ struct OllamaPage: View {
         }
         testState = .running
         Task {
-            let polisher = OllamaTextPolisher()
+            let polisher = OllamaPolisher(
+                endpoint: configuration.endpoint,
+                model: configuration.model,
+                timeout: configuration.timeout
+            )
             do {
-                try await polisher.testConnection(configuration: configuration)
+                try await polisher.testConnection()
                 await MainActor.run { testState = .success }
             } catch {
                 let reason = Self.describe(error: error)
@@ -199,7 +203,7 @@ struct OllamaPage: View {
     }
 
     private static func describe(error: Swift.Error) -> String {
-        if let polishError = error as? OllamaTextPolisher.Error {
+        if let polishError = error as? OllamaPolisher.Error {
             switch polishError {
             case .invalidConfiguration: return "模型名称为空。"
             case .modelNotFound(let model): return "模型「\(model)」不存在，请先 ollama pull。"
