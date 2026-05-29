@@ -1,4 +1,4 @@
-name: Xcode - Build and Analyze
+name: Build and Test
 
 on:
   push:
@@ -7,10 +7,36 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
-    name: Build and analyse default scheme using xcodebuild command
+  build-test:
+    name: Build and run unit tests
     runs-on: macos-latest
 
     steps:
-      - name: Build macOS Application
-        uses: starburst997/build-macos@v1.0.7
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build
+        run: |
+          xcodebuild build \
+            -project vbcc-mac.xcodeproj \
+            -scheme vbcc-mac \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Unit tests
+        run: |
+          xcodebuild test \
+            -project vbcc-mac.xcodeproj \
+            -scheme vbcc-mac \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            -only-testing:vbcc-macTests \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
