@@ -57,7 +57,7 @@ struct ContentView: View {
     ContentView()
         .environmentObject(VBCCServer(tokens: TokenStore()))
         .environmentObject(TokenStore())
-        .environmentObject(OllamaPreferences())
+        .environmentObject(PolishPreferences())
         .environmentObject(TranscriptStore())
         .environmentObject(AccessibilityStatus())
 }

@@ -9,20 +9,20 @@ import SwiftUI
 struct vbcc_macApp: App {
     @StateObject private var tokens: TokenStore
     @StateObject private var server: VBCCServer
-    @StateObject private var ollama: OllamaPreferences
+    @StateObject private var polish: PolishPreferences
     @StateObject private var transcripts: TranscriptStore
     @StateObject private var ax = AccessibilityStatus()
 
     init() {
         let store = TokenStore()
-        let ollamaPreferences = OllamaPreferences()
+        let polishPreferences = PolishPreferences()
         let transcriptStore = TranscriptStore()
         _tokens = StateObject(wrappedValue: store)
-        _ollama = StateObject(wrappedValue: ollamaPreferences)
+        _polish = StateObject(wrappedValue: polishPreferences)
         _transcripts = StateObject(wrappedValue: transcriptStore)
         _server = StateObject(wrappedValue: VBCCServer(
             tokens: store,
-            ollamaPreferences: ollamaPreferences,
+            polishPreferences: polishPreferences,
             transcripts: transcriptStore
         ))
     }
@@ -32,7 +32,7 @@ struct vbcc_macApp: App {
             ContentView()
                 .environmentObject(server)
                 .environmentObject(tokens)
-                .environmentObject(ollama)
+                .environmentObject(polish)
                 .environmentObject(transcripts)
                 .environmentObject(ax)
                 .onAppear { server.start() }

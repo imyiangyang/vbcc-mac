@@ -42,7 +42,7 @@ final class VBCCServer: ObservableObject {
     @Published private(set) var log: [LogEntry] = []
 
     let tokens: TokenStore
-    let ollamaPreferences: OllamaPreferences
+    let polishPreferences: PolishPreferences
     let transcripts: TranscriptStore
     private let injector = TextInjector()
 
@@ -74,11 +74,11 @@ final class VBCCServer: ObservableObject {
 
     init(
         tokens: TokenStore,
-        ollamaPreferences: OllamaPreferences = OllamaPreferences(),
+        polishPreferences: PolishPreferences = PolishPreferences(),
         transcripts: TranscriptStore? = nil
     ) {
         self.tokens = tokens
-        self.ollamaPreferences = ollamaPreferences
+        self.polishPreferences = polishPreferences
         self.transcripts = transcripts ?? MainActor.assumeIsolated { TranscriptStore() }
     }
 
@@ -470,31 +470,42 @@ final class VBCCServer: ObservableObject {
     }
 
     private func textForInjection(original text: String) async -> (text: String, polished: Bool) {
-        guard let configuration = ollamaPreferences.configuration, configuration.enabled else {
-            return (text, false)
-        }
-
+        guard polishPreferences.isEnabled else { return (text, false) }
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return (text, false)
         }
 
-        let polisher = OllamaPolisher(
-            endpoint: configuration.endpoint,
-            model: configuration.model,
-            timeout: configuration.timeout
-        )
+        switch polishPreferences.providerKind {
+        case .ollama:
+            guard let cfg = polishPreferences.ollamaConfig else {
+                appendLog("⚠️ Ollama 配置不完整,跳过整理")
+                return (text, false)
+            }
+            let polisher = OllamaPolisher(
+                endpoint: cfg.endpoint,
+                model: cfg.model,
+                timeout: cfg.timeout
+            )
+            return await runPolish(polisher: polisher, prompt: cfg.prompt, text: text, label: "Ollama")
+        case .ark:
+            // Task 5 接入
+            appendLog("⚠️ 豆包 provider 尚未接入,使用原文")
+            return (text, false)
+        }
+    }
 
+    private func runPolish(polisher: TranscriptPolishing, prompt: String, text: String, label: String) async -> (text: String, polished: Bool) {
         do {
-            let polished = try await polisher.polish(text, prompt: configuration.prompt)
+            let polished = try await polisher.polish(text, prompt: prompt)
             if polished != text {
-                appendLog("🪄 Ollama 已整理语音文本")
+                appendLog("🪄 \(label) 已整理语音文本")
                 return (polished, true)
             } else {
-                appendLog("🪄 Ollama 返回原文")
+                appendLog("🪄 \(label) 返回原文")
                 return (polished, false)
             }
         } catch {
-            appendLog("⚠️ Ollama 整理失败,使用原文:\(error)")
+            appendLog("⚠️ \(label) 整理失败,使用原文:\(error)")
             return (text, false)
         }
     }

@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct OllamaPage: View {
-    @EnvironmentObject private var ollama: OllamaPreferences
+    @EnvironmentObject private var polish: PolishPreferences
     @State private var testState: TestState = .idle
 
     private enum TestState: Equatable {
@@ -23,7 +23,7 @@ struct OllamaPage: View {
             VStack(alignment: .leading, spacing: 16) {
                 header
 
-                if ollama.isEnabled {
+                if polish.isEnabled {
                     connectionCard
                     promptCard
                 } else {
@@ -36,7 +36,7 @@ struct OllamaPage: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color(nsColor: .windowBackgroundColor))
         .navigationTitle("Ollama")
-        .animation(.easeInOut(duration: 0.2), value: ollama.isEnabled)
+        .animation(.easeInOut(duration: 0.2), value: polish.isEnabled)
     }
 
     private var header: some View {
@@ -44,7 +44,7 @@ struct OllamaPage: View {
             Label("Ollama 本地整理", systemImage: "wand.and.sparkles")
                 .font(.title3.weight(.semibold))
             Spacer()
-            Toggle("启用", isOn: $ollama.isEnabled)
+            Toggle("启用", isOn: $polish.isEnabled)
                 .toggleStyle(.switch)
         }
     }
@@ -59,7 +59,7 @@ struct OllamaPage: View {
                     Text("地址")
                         .foregroundStyle(.secondary)
                         .frame(width: 60, alignment: .leading)
-                    TextField("http://127.0.0.1:11434", text: $ollama.endpointText)
+                    TextField("http://127.0.0.1:11434", text: $polish.ollamaEndpoint)
                         .textFieldStyle(.roundedBorder)
                 }
                 GridRow {
@@ -67,7 +67,7 @@ struct OllamaPage: View {
                         .foregroundStyle(.secondary)
                         .frame(width: 60, alignment: .leading)
                     HStack(spacing: 8) {
-                        TextField("qwen3.5:0.8b", text: $ollama.model)
+                        TextField("qwen3.5:0.8b", text: $polish.ollamaModel)
                             .textFieldStyle(.roundedBorder)
                         Button(action: runConnectionTest) {
                             if testState == .running {
@@ -86,8 +86,8 @@ struct OllamaPage: View {
                         .foregroundStyle(.secondary)
                         .frame(width: 60, alignment: .leading)
                     HStack {
-                        Slider(value: $ollama.timeout, in: 5...60, step: 1)
-                        Text("\(Int(ollama.timeout)) 秒")
+                        Slider(value: $polish.timeout, in: 5...60, step: 1)
+                        Text("\(Int(polish.timeout)) 秒")
                             .font(.system(.caption, design: .monospaced))
                             .foregroundStyle(.secondary)
                             .frame(width: 52, alignment: .trailing)
@@ -117,7 +117,7 @@ struct OllamaPage: View {
                     .font(.headline)
                 Spacer()
                 Button("恢复默认") {
-                    ollama.prompt = OllamaPreferences.defaultPrompt
+                    polish.prompt = PolishPreferences.defaultPrompt
                 }
                 .controlSize(.small)
             }
@@ -125,7 +125,7 @@ struct OllamaPage: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            TextEditor(text: $ollama.prompt)
+            TextEditor(text: $polish.prompt)
                 .font(.system(.body, design: .default))
                 .frame(minHeight: 220)
                 .scrollContentBackground(.hidden)
@@ -181,7 +181,7 @@ struct OllamaPage: View {
     }
 
     private func runConnectionTest() {
-        guard let configuration = ollama.configuration else {
+        guard let configuration = polish.ollamaConfig else {
             testState = .failure("地址无效，请检查后重试。")
             return
         }

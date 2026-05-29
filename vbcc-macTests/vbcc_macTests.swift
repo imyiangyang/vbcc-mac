@@ -75,6 +75,78 @@ struct vbcc_macTests {
         #expect(KeychainStore.get(forAccount: testAccount) == nil)
     }
 
+    @MainActor
+    @Test func polishPreferencesDefaultsAndProviderPersistence() async throws {
+        let suiteName = "vbcc.tests.prefs.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let prefs = PolishPreferences(defaults: defaults)
+        #expect(prefs.isEnabled == false)
+        #expect(prefs.providerKind == .ollama)
+        #expect(prefs.ollamaEndpoint == "http://127.0.0.1:11434")
+        #expect(prefs.ollamaModel == "qwen3.5:0.8b")
+        #expect(prefs.arkBaseURL == "https://ark.cn-beijing.volces.com/api/v3")
+        #expect(prefs.arkModel == "")
+        #expect(prefs.timeout == 5)
+
+        prefs.providerKind = .ark
+        prefs.arkBaseURL = "https://example.com/api/v3/"
+        prefs.arkModel = "doubao-test"
+
+        let reloaded = PolishPreferences(defaults: defaults)
+        #expect(reloaded.providerKind == .ark)
+        #expect(reloaded.arkBaseURL == "https://example.com/api/v3/")
+        #expect(reloaded.arkModel == "doubao-test")
+    }
+
+    @MainActor
+    @Test func polishPreferencesReadsLegacyOllamaKeys() async throws {
+        let suiteName = "vbcc.tests.prefs.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        // 模拟老用户已存的 Ollama 配置(老键名)
+        defaults.set(true, forKey: "vbcc.ollama.enabled")
+        defaults.set("http://localhost:11434", forKey: "vbcc.ollama.endpoint")
+        defaults.set("custom-model", forKey: "vbcc.ollama.model")
+        defaults.set("我的自定义 prompt", forKey: "vbcc.ollama.prompt")
+        defaults.set(20.0, forKey: "vbcc.ollama.timeout")
+
+        let prefs = PolishPreferences(defaults: defaults)
+        #expect(prefs.isEnabled == true)
+        #expect(prefs.providerKind == .ollama)
+        #expect(prefs.ollamaEndpoint == "http://localhost:11434")
+        #expect(prefs.ollamaModel == "custom-model")
+        #expect(prefs.prompt == "我的自定义 prompt")
+        #expect(prefs.timeout == 20.0)
+    }
+
+    @MainActor
+    @Test func polishPreferencesArkConfigRequiresKeychainKey() async throws {
+        let suiteName = "vbcc.tests.prefs.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        let testAccount = "vbcc.tests.ark.key.\(UUID().uuidString)"
+        defer {
+            defaults.removePersistentDomain(forName: suiteName)
+            KeychainStore.set(nil, forAccount: testAccount)
+        }
+
+        let prefs = PolishPreferences(defaults: defaults, arkAPIKeyAccount: testAccount)
+        prefs.providerKind = .ark
+        prefs.arkBaseURL = "https://ark.cn-beijing.volces.com/api/v3"
+        prefs.arkModel = "doubao-test"
+
+        #expect(prefs.arkConfig == nil)
+
+        KeychainStore.set("sk-test", forAccount: testAccount)
+        let cfg = prefs.arkConfig
+        #expect(cfg?.apiKey == "sk-test")
+        #expect(cfg?.model == "doubao-test")
+        #expect(cfg?.baseURL.absoluteString == "https://ark.cn-beijing.volces.com/api/v3")
+        #expect(cfg?.timeout == 5)
+    }
+
 }
 
 private final class URLProtocolMock: URLProtocol {
