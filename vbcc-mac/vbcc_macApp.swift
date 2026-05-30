@@ -38,5 +38,6 @@ struct vbcc_macApp: App {
                 .onAppear { server.start() }
         }
         .defaultSize(width: 880, height: 640)
+        .windowResizability(.contentMinSize)
     }
 }
