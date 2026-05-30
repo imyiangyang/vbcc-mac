@@ -109,7 +109,6 @@
 				2F25B3032FBB74DC00B42AD5 /* Messages.swift */,
 				2F25B3042FBB74DC00B42AD5 /* README.md */,
 			);
-			name = Shared;
 			path = Shared;
 			sourceTree = SOURCE_ROOT;
 		};
