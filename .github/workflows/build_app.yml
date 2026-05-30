@@ -9,14 +9,11 @@ on:
 jobs:
   build-test:
     name: Build and run unit tests
-    runs-on: macos-26-arm64
+    runs-on: macos-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-
-      - name: Select Xcode 26.4.1
-        run: sudo xcode-select -s /Applications/Xcode_26.4.1.app
 
       - name: Show Xcode version
         run: xcodebuild -version
