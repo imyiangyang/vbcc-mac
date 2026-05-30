@@ -22,21 +22,22 @@ struct PolishPage: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            header
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                header
 
-            if polish.isEnabled {
-                providerCard
-                connectionCard
-                promptCard
-            } else {
-                disabledHint
-                Spacer(minLength: 0)
+                if polish.isEnabled {
+                    providerCard
+                    connectionCard
+                    promptCard
+                } else {
+                    disabledHint
+                }
             }
+            .padding(20)
+            .frame(maxWidth: 720, alignment: .topLeading)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
-        .padding(20)
-        .frame(maxWidth: 720, maxHeight: .infinity, alignment: .topLeading)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color(nsColor: .windowBackgroundColor))
         .navigationTitle("模型配置")
         .animation(.easeInOut(duration: 0.2), value: polish.isEnabled)
@@ -207,7 +208,7 @@ struct PolishPage: View {
 
             TextEditor(text: $polish.prompt)
                 .font(.system(.body, design: .default))
-                .frame(maxHeight: .infinity)
+                .frame(minHeight: 240)
                 .scrollContentBackground(.hidden)
                 .background(Color(nsColor: .textBackgroundColor))
                 .clipShape(RoundedRectangle(cornerRadius: 6))
@@ -217,7 +218,7 @@ struct PolishPage: View {
                 )
         }
         .padding(16)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor)))
     }
 
